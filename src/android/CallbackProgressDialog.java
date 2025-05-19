@@ -9,8 +9,8 @@ import android.content.Context;
 import android.view.MotionEvent;
 
 public class CallbackProgressDialog extends ProgressDialog {
-
-  public static CallbackContext callbackContext;
+  private CallbackContext callbackContext;
+  private boolean isCallbackSent = false;
 
   public CallbackProgressDialog(Context context) {
     super(context);
@@ -20,8 +20,8 @@ public class CallbackProgressDialog extends ProgressDialog {
       CharSequence title, CharSequence message, boolean indeterminate,
       boolean cancelable, OnCancelListener cancelListener,
       CallbackContext callbackContext) {
-    CallbackProgressDialog.callbackContext = callbackContext;
     CallbackProgressDialog dialog = new CallbackProgressDialog(context);
+    dialog.callbackContext = callbackContext;
     dialog.setTitle(title);
     dialog.setMessage(message);
     dialog.setIndeterminate(indeterminate);
@@ -32,14 +32,19 @@ public class CallbackProgressDialog extends ProgressDialog {
   }
 
   private void sendCallback() {
-    PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
-    pluginResult.setKeepCallback(true);
-    callbackContext.sendPluginResult(pluginResult);
+    if (!isCallbackSent && callbackContext != null) {
+      PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+      pluginResult.setKeepCallback(true);
+      callbackContext.sendPluginResult(pluginResult);
+      isCallbackSent = true;
+      callbackContext = null; // Clear the reference
+    }
   }
 
   @Override
   public void onBackPressed() {
     sendCallback();
+    super.onBackPressed();
   }
 
   @Override
@@ -48,7 +53,12 @@ public class CallbackProgressDialog extends ProgressDialog {
       sendCallback();
       return true;
     }
-    return false;
+    return super.onTouchEvent(event);
   }
 
+  @Override
+  public void dismiss() {
+    sendCallback();
+    super.dismiss();
+  }
 }
